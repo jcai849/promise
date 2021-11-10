@@ -1,0 +1,2 @@
+useDynLib(promise, C_resolve, C_promise)
+export(promise, resolve)
