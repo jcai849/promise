@@ -1,6 +1,6 @@
 library(promise)
 
-path = tempfile("test")
+path = tempfile("testfile")
 promise(
     function(resolve, reject){
         value <- "working!"

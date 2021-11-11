@@ -1,2 +1,2 @@
-useDynLib(promise, C_resolve, C_promise)
-export(promise, resolve)
+useDynLib(promise, C_resolve, C_promise, C_then)
+export(promise, then)
