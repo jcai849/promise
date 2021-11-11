@@ -1,5 +1,5 @@
 promise <- function(executor) {
-    reduce <- function(value) {
+    resolve <- function(value) {
         sval <- serialize(value, NULL)
         .Call(C_resolve, sval)
     }
