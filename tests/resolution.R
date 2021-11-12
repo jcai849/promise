@@ -1,15 +1,10 @@
 library(promise)
 
-path = tempfile("testfile")
-promise(
+working <- "Working!"
+p <- promise(
     function(resolve, reject){
-        value <- "working!"
-        placement <- file(path, "w+")
-        cat(value, "\n", file=x)
-        close(placement)
-        resolve(value)
+        resolve(working)
+        reject("How did I get here?")
 })
-
-Sys.sleep(2)
-placement <- file(path, "r")
-readLines(placement)
+print(p)
+print(parallel::mccollect(p$job))

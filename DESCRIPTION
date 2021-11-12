@@ -9,4 +9,5 @@ Description: Implementation of the promise object with the public interface
 	based on that of ECMAScript Language Specification 2022. See
 	https://tc39.es/ecma262/multipage/control-abstraction-objects.html#sec-promise-objects
 	. Also see the promises (with an 's') package in R.
+imports: parallel
 License: MIT
