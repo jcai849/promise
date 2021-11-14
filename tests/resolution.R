@@ -6,5 +6,9 @@ p <- promise(
         resolve(working)
         reject("How did I get here?")
 })
+
 print(p)
-print(parallel::mccollect(p$job))
+
+then(p,
+     onFulfilled = print,
+     onRejected = print)
