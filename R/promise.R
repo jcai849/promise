@@ -1,52 +1,48 @@
 promise <- function(executor) {
-    make_tail <- function(state) function(value) {
-        result <- make_result(state, value)
-        parallel:::sendMaster(result)
-        q("no")
-    }
-    resolve <- make_tail("RESOLVED")
-    reject <- make_tail("REJECTED")
-    make_promise(job=mcparallel(executor(resolve, reject)),
-                 state="PENDING", value=NULL, settled=FALSE)
-}
-
-then <- function(promise, onFulfilled, onRejected) {
-    promise_result <- result(promise)
-    fun <- if (resolved(promise_result)) { onFulfilled
-              } else if (rejected(promise_result)) { onRejected
-              } else stop("odd result")
-    then_result <- fun(value(promise_result))
-    if (!is.Promise(then_result)) {
-        make_promise(job=NULL, state="RESOLVED",
-                     value=then_result, settled=TRUE)
-    } else then_result
-}
-
-make_promise <- function(job, state, value, settled) {
-    stopifnot(valid_state(state))
-    promise <- structure(new.env(parent=emptyenv()), class="Promise")
-    job(promise) <- job
-    state(promise) <- state
-    value(promise) <- value
-    settled(promise) <- settled
+    pfd <- pipe_fd()
+    callCC(function(k){
+        make_tail <- function(state) function(value) {
+            result <- make_result(state, value)
+            send(pfd[2], result)
+            k(NULL)
+        }
+        resolve <- make_tail("RESOLVED")
+        reject <- make_tail("REJECTED")
+        executor(resolve, reject)
+    })
+    close_fd(pfd[2])
+    promise <- make_promise(fd=pfd[1], state="PENDING", value=NULL)
+    register_promise(promise)
     promise
 }
 
-result <- function(x, ...) UseMethod("result")
-result.Promise <- function(x, ...) {
-    if (!settled(x)) {
-        result <- mccollect(job(x))[[1]]
-        settled(x) <- TRUE
-        state(x) <- state(result)
-        value(x) <- value(result)
-    }
-    x
+then <- function(promise, onFulfilled, onRejected) {
+    then <- make_then(onFulfilled, onRejected)
+    register_then(promise, then)
+    then
 }
 
-job <- function(x, ...) UseMethod("job")
-job.Promise <- function(x, ...) x$job
-`job<-` <- function(x, value) UseMethod("job<-")
-`job<-.Promise` <- function(x, value) {x$job <- value; x}
+make_promise <- function(fd, state, value) {
+    stopifnot(valid_state(state))
+    promise <- structure(new.env(parent=emptyenv()), class="Promise")
+    fd(promise) <- fd
+    state(promise) <- state
+    value(promise) <- value
+    promise
+}
+
+make_then <- function(onFulfilled, onRejected) {
+    then <- make_promise(NULL, "PENDING", NULL)
+    class(then) <- c(class(then), "ThenPromise")
+    onFulfilled(then) <- onFulfilled
+    onRejected(then) <- onRejected
+    then
+}
+
+fd <- function(x, ...) UseMethod("fd")
+fd.Promise <- function(x, ...) x$fd
+`fd<-` <- function(x, value) UseMethod("fd<-")
+`fd<-.Promise` <- function(x, value) {x$fd <- value; x}
 
 state <- function(x, ...) UseMethod("state")
 state.Promise <- function(x, ...) x$state
@@ -58,10 +54,15 @@ value.Promise <- function(x, ...) x$value
 `value<-` <- function(x, value) UseMethod("value<-")
 `value<-.Promise` <- function(x, value) {x$value <- value; x}
 
-settled <- function(x, ...) UseMethod("settled")
-settled.Promise <- function(x, ...) x$settled
-`settled<-` <- function(x, value) UseMethod("settled<-")
-`settled<-.Promise` <- function(x, value) {x$settled <- value; x}
+onFulfilled <- function(x, ...) UseMethod("onFulfilled")
+onFulfilled.ThenPromise <- function(x, ...) x$onFulfilled
+`onFulfilled<-` <- function(x, onFulfilled) UseMethod("onFulfilled<-")
+`onFulfilled<-.ThenPromise` <- function(x, onFulfilled) {x$onFulfilled <- onFulfilled; x}
+
+onRejected <- function(x, ...) UseMethod("onRejected")
+onRejected.ThenPromise <- function(x, ...) x$onRejected
+`onRejected<-` <- function(x, onRejected) UseMethod("onRejected<-")
+`onRejected<-.ThenPromise` <- function(x, onRejected) {x$onRejected <- onRejected; x}
 
 resolved <- function(x, ...) UseMethod("resolved")
 resolved.Promise <- function(x, ...) identical(state(x), "RESOLVED")

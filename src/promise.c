@@ -5,78 +5,30 @@
 #include <Rinternals.h>
 // #include <R_ext/eventloop.h>
 
-typedef struct Prms {
-    int pfd;
-    SEXP then; // should be list of then's; one for now to test working
-    SEXP thenContext; // environment in which to evaluate 'then'
+#define MAX_THENS 10
+
+typedef struct Promise {
+    int fd;
+    char *state;
+    SEXP value;
+    SEXP then[MAX_THENS];
 } Promise;
 
-int pfd[2];
+SEXP C_pipe_fd(void) {
+    SEXP fd;
 
-SEXP C_promise(SEXP sExecutor, SEXP sResolve, SEXP rho) {
-    pid_t cpid;
-    Promise *promise;
-    SEXP ptr, R_fcall;
-
-    promise = (Promise *) calloc(1, sizeof(Promise));
-    pipe(pfd);
-    cpid = fork();
-    if (cpid == 0) {
-        close(pfd[1]);
-        R_fcall = PROTECT(lang2(sExecutor, sResolve));
-        eval(R_fcall, rho);
-        exit(0);
-    }
-    close(pfd[0]);
-    promise->pfd = pfd[1];
-    promise->then = NULL;
-    promise->thenContext = NULL;
-    ptr = R_MakeExternalPtr(promise, install("promise"), R_NilValue);
-
-    return ptr;
+    fd = PROTECT(allocVector(INTSXP, 2));
+    pipe(INTEGER(fd));
+    UNPROTECT(1);
+    return fd;
 }
 
-SEXP C_resolve(SEXP sValue) {
-    // write(pfd[0], RAW(sValue), sValue->truelength); // not truelength?
-    close(pfd[0]);
-    exit(0);
+SEXP C_close_fd(int fd) {
+    close(fd);
+    return ScalarLogical(1);
 }
 
-SEXP C_then(SEXP sPromise, SEXP sOnFulfilled, SEXP rho) {
-    Promise *ppromise;
-
-    ppromise = R_ExternalPtrAddr(sPromise);
-    ppromise->then = sOnFulfilled;
-    ppromise->thenContext = rho;
-    return sPromise;
-}
-
-SEXP run_then(SEXP sPromise) {
-    Promise *ppromise;
-    char buf[BUFSIZ];
-    pid_t cpid;
-    int i, n;
-    SEXP ans, R_fcall, res;
-
-    ppromise = R_ExternalPtrAddr(sPromise);
-    i = 0;
-    while((n = read(ppromise->pfd, buf, sizeof buf)) > 0)
-        i += n;
-    res = allocVector(RAWSXP, i);
-    strcpy(buf, res);
-    close(ppromise->pfd);
-
-    pipe(pfd);
-    cpid = fork();
-    if (cpid == 0) {
-        close(pfd[1]);
-        R_fcall = PROTECT(lang2(ppromise->then, res));
-        ans = PROTECT(eval(R_fcall, ppromise->thenContext));
-        C_resolve(ans);
-    }
-    close(pfd[0]);
-    ppromise->pfd = pfd[1];
-    ppromise->then = NULL;
-    ppromise->thenContext = NULL;
-    return sPromise;
+SEXP C_send(int fd, SEXP value, int length) {
+    write(fd, RAW(value), length);
+    return ScalarLogical(1);
 }
