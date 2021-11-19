@@ -1,13 +1,13 @@
 Package: promise
 Type: Package
-Title: An actual implementation of promises that just works (for unix)
-Version: 1.0
+Title: An actual implementation of promises that just works (for unix) (but not yet)
+Version: 0.3
 Date: 2021-11-10
 Author: Jason Cairns
 Maintainer: Jason Cairns <jason.cairns@auckland.ac.nz>
 Description: Implementation of the promise object with the public interface
-	based on that of ECMAScript Language Specification 2022. See
+    	based on that of ECMAScript Language Specification 2022.See
 	https://tc39.es/ecma262/multipage/control-abstraction-objects.html#sec-promise-objects
 	. Also see the promises (with an 's') package in R.
-imports: parallel
+Suggests: parallel
 License: MIT

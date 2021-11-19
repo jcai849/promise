@@ -1,0 +1,6 @@
+x <- promise:::pipe_fd()
+print(x)
+promise:::send(x[2], 1:10)
+promise:::close_fd(x[2])
+z <- promise:::fetch(x[1])
+print(z)
