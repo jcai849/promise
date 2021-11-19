@@ -11,34 +11,32 @@ static int ifd, ofd;
 static int fired = 0, active = 1;
 static unsigned long intersleep = 300;
 
-SEXP aih(SEXP tout, SEXP ap);
-static void *thread(void *pass);
-static void uih(void *data);
-SEXP promise_set_sleep(SEXP tout);
-static void millisleep(unsigned long tout);
-void stopt(void);
+SEXP C_start_monitoring(void);
+static void *fire_loop(void *pass);
+static void monitor(void *data);
+SEXP C_set_sleep(SEXP timeout);
+static void millisleep(unsigned long timeout);
+SEXP C_stop_monitoring(void);
 
-SEXP aih(SEXP tout, SEXP ap) {
+SEXP C_start_monitoring(void) {
     int fds[2];
-    pthread_t t;
-    pthread_attr_t ta;
+    pthread_t *t;
+    pthread_attr_t *ta;
 
     pipe(fds);
     ifd = fds[0];
     ofd = fds[1];
 
-    promise_set_sleep(tout);
+    addInputHandler(R_InputHandlers, ifd, &monitor, 32);
 
-    addInputHandler(R_InputHandlers, ifd, &uih, 32);
-
-    pthread_attr_init(&ta);
-    pthread_attr_setdetachstate(&ta, PTHREAD_CREATE_DETACHED);
-    pthread_create(&t, &ta, thread, 0);
+    pthread_attr_init(ta);
+    pthread_attr_setdetachstate(ta, PTHREAD_CREATE_DETACHED);
+    pthread_create(t, ta, fire_loop, 0);
 
     return ScalarLogical(1);
 }
 
-static void *thread(void *pass) {
+static void *fire_loop(void *pass) {
     char buf[16];
     while (active) {
         millisleep(intersleep);
@@ -50,29 +48,31 @@ static void *thread(void *pass) {
     return 0;
 }
 
-static void uih(void *data) {
+static void monitor(void *data) {
     char buf[16];
 
     read(ifd, buf, 16);
 
     // select on fd list (fds from promise.c)?
+    // settle_promise
 
     fired = 0;
 }
 
-SEXP promise_set_sleep(SEXP tout) {
-    intersleep = (unsigned long) (asReal(tout) * 1000.0 + 0.5);
+SEXP C_set_sleep(SEXP timeout) {
+    intersleep = (unsigned long) (asReal(timeout) * 1000.0 + 0.5);
     if (intersleep < 0) intersleep = 300;
     return ScalarLogical(1);
 }
 
-static void millisleep(unsigned long tout) {
+static void millisleep(unsigned long timeout) {
     struct timeval tv;
-    tv.tv_usec = (tout%1000)*1000;
-    tv.tv_sec = tout/1000;
+    tv.tv_usec = (timeout%1000)*1000;
+    tv.tv_sec = timeout/1000;
     select(0, 0, 0, 0, &tv);
 }
 
-void stopt(void) {
+SEXP C_stop_monitoring(void) {
     active=0;
+    return ScalarLogical(1);
 }

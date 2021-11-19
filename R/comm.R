@@ -1,9 +1,9 @@
-pipe_fd <- function() {
-    .Call(C_pipe_fd)
+pipe <- function() {
+    .Call(C_pipe)
 }
-close_fd <- function(fd) {
+close <- function(fd) {
     stopifnot(is.integer(fd), length(fd) == 1)
-    .Call(C_close_fd, fd)
+    .Call(C_close, fd)
 }
 send <- function(fd, value) {
     stopifnot(is.integer(fd), length(fd) == 1)

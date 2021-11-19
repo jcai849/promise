@@ -9,8 +9,8 @@
 
 SEXP C_send(SEXP fd, SEXP value);
 SEXP C_fetch(SEXP fd);
-SEXP C_pipe_fd(void);
-SEXP C_close_fd(int fd);
+SEXP C_pipe(void);
+SEXP C_close(SEXP fd);
 
 SEXP C_send(SEXP fd, SEXP value) {
     int n, fdi, need;
@@ -85,7 +85,7 @@ SEXP C_fetch(SEXP fd) {
     return out;
 }
 
-SEXP C_pipe_fd(void) {
+SEXP C_pipe(void) {
     SEXP fd;
 
     fd = allocVector(INTSXP, 2);
@@ -93,7 +93,7 @@ SEXP C_pipe_fd(void) {
     return fd;
 }
 
-SEXP C_close_fd(int fd) {
-    close(fd);
+SEXP C_close(SEXP fd) {
+    close(*INTEGER(fd));
     return ScalarLogical(1);
 }

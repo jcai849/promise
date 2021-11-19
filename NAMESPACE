@@ -1,7 +1,8 @@
 useDynLib(promise,
-          C_pipe_fd, C_close_fd , C_send, C_fetch,
+          C_pipe, C_close , C_send, C_fetch,
 	  C_make_promise, C_promise_state, C_make_then,
-          C_register_then, C_register_promise)
+          C_register_then, C_register_promise,
+          C_set_sleep, C_stop_monitoring, C_start_monitoring)
 export(promise, then)
 S3method("format", "Promise")
 S3method("print", "Promise")
