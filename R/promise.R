@@ -1,5 +1,5 @@
 promise <- function(executor) {
-    pfd <- pipe_fd()
+    pfd <- pipe()
     callCC(function(k) {
         make_tail <- function(state) function(value) {
             result <- make_result(state, value)
@@ -10,7 +10,7 @@ promise <- function(executor) {
         reject <- make_tail("REJ")
         executor(resolve, reject)
     })
-    close_fd(pfd[2])
+    close(pfd[2])
     promise <- make_promise(fd=pfd[1], state="PND", value=NULL)
     register_promise(promise)
     promise

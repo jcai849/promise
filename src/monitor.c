@@ -20,8 +20,8 @@ SEXP C_stop_monitoring(void);
 
 SEXP C_start_monitoring(void) {
     int fds[2];
-    pthread_t *t;
-    pthread_attr_t *ta;
+    pthread_t t;
+    pthread_attr_t ta;
 
     pipe(fds);
     ifd = fds[0];
@@ -29,9 +29,9 @@ SEXP C_start_monitoring(void) {
 
     addInputHandler(R_InputHandlers, ifd, &monitor, 32);
 
-    pthread_attr_init(ta);
-    pthread_attr_setdetachstate(ta, PTHREAD_CREATE_DETACHED);
-    pthread_create(t, ta, fire_loop, 0);
+    pthread_attr_init(&ta);
+    pthread_attr_setdetachstate(&ta, PTHREAD_CREATE_DETACHED);
+    pthread_create(&t, &ta, &fire_loop, 0);
 
     return ScalarLogical(1);
 }

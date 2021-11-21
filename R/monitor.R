@@ -11,6 +11,6 @@ start_monitoring <- function() {
     .Call("C_start_monitoring")
 }
 
-# .onLoad <- function(libname, pkgname) {
-#     invisible(start_monitoring())
-# }
+.onLoad <- function(libname, pkgname) {
+    invisible(start_monitoring())
+}
