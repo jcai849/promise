@@ -1,7 +1,9 @@
 #include <string.h>
+#include <unistd.h>
 
 #include <R.h>
 #include <Rinternals.h>
+#include "comm.h"
 
 /* To be made more robust upon attaining functionality */
 #define MAX_THENS 10
@@ -32,6 +34,8 @@ SEXP C_make_then(SEXP promise, SEXP onFulfilled, SEXP onRejected);
 SEXP C_register_promise(SEXP promise);
 SEXP C_register_then(SEXP promise, SEXP then);
 SEXP C_promise_state(SEXP promise);
+SEXP C_promise_value(SEXP promise);
+SEXP C_settle_promise(SEXP promise, SEXP unserialize, SEXP rho); 
 
 SEXP C_make_promise(SEXP fd, SEXP state, SEXP value) {
     Promise *promise;
@@ -73,6 +77,23 @@ SEXP C_register_then(SEXP promise, SEXP then) {
     return ScalarLogical(1);
 }
 
+SEXP C_settle_promise(SEXP promise, SEXP unserialize, SEXP rho) {
+    Promise *ppromise;
+    SEXP value;
+
+    ppromise = R_ExternalPtrAddr(promise);
+    value = fetch(ppromise->fd);
+    ppromise->value = eval(lang2(unserialize, value), rho);
+    strncpy(ppromise->state, "RES", STATE_SIZE);
+    close(ppromise->fd);
+    ppromise->fd = -1;
+    return ScalarLogical(1);
+}
+
 SEXP C_promise_state(SEXP promise) {
     return mkString(((Promise *) R_ExternalPtrAddr(promise))->state);
+}
+
+SEXP C_promise_value(SEXP promise) {
+    return (((Promise *) R_ExternalPtrAddr(promise))->value);
 }

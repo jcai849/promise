@@ -10,11 +10,6 @@ send <- function(fd, value) {
     serialized <- serialize(value, NULL)
     .Call(C_send, fd, serialized)
 }
-fetch <- function(fd) {
-    stopifnot(is.integer(fd), length(fd) == 1)
-    msg <- .Call(C_fetch, fd)
-    unserialize(msg)
-}
 
 make_result <- function(state, value) {
     stopifnot(valid_state(state), !missing(value))

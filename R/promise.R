@@ -47,6 +47,11 @@ register_promise <- function(promise) {
     .Call(C_register_promise, promise)
 }
 
+settle_promise <- function(promise) {
+    stopifnot(is.Promise(promise))
+    .Call(C_settle_promise, promise, unserialize, new.env())
+}
+
 valid_states <- function() c("RES", "REJ", "PND")
 valid_state <- function(state)
     is.character(state) && (length(state) == 1L) && state %in% valid_states()
@@ -54,6 +59,10 @@ state <- function(x, ...) UseMethod("state")
 state.Promise <- function(x, ...) .Call(C_promise_state, x)
 
 value <- function(x, ...) UseMethod("value")
+value.Promise <- function(x, ...) {
+    if (pending(x)) { "Undefined"
+    } else .Call(C_promise_value, x)
+}
 
 resolved <- function(x, ...) UseMethod("resolved")
 resolved.Promise <- function(x, ...) identical(state(x), "RES")
@@ -66,7 +75,9 @@ is.Promise <- function(x) inherits(x, "Promise")
 is.ThenPromise <- function(x) inherits(x, "ThenPromise")
 format.Promise <- function(x, ...)
     c("Promise:",
-    format_member("state", state(x)))
+    format_member("state", state(x)),
+    format_member("value", if (pending(x)) "Undefined" else
+                                capture.output(str(value(x)))))
 format_member <- function(tag, value)
-    paste0("\t", c(paste0(tag, ":"), paste0("\t", capture.output(str(value)))))
+    paste0("\t", c(paste0(tag, ":"), paste0("\t", value)))
 print.Promise <- str.Promise <- function(x, ...) cat(format(x), sep="\n")

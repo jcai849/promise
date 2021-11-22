@@ -8,7 +8,6 @@
 #define MAX_SEND_SIZE (1024*1024*128)
 
 SEXP C_send(SEXP fd, SEXP value);
-SEXP C_fetch(SEXP fd);
 SEXP C_pipe(void);
 SEXP C_close(SEXP fd);
 
@@ -43,39 +42,38 @@ SEXP C_send(SEXP fd, SEXP value) {
     return ScalarLogical(1);
 }
 
-SEXP C_fetch(SEXP fd) {
+SEXP fetch(int fd) {
     unsigned int len = 0, i = 0;
     unsigned char *payload;
-    int n, fdi, need;
+    int n, need;
     SEXP out;
 
-    fdi = *INTEGER(fd);
-    n = read(fdi, &len, sizeof len);
+    n = read(fd, &len, sizeof len);
 #ifdef PROM_DEBUG
-    Rprintf("Receiving %d bytes from descriptor %d...\n", len, fdi);
+    Rprintf("Receiving %d bytes from descriptor %d...\n", len, fd);
 #endif
     if (n != sizeof(len) || len == 0) {
-        close(fdi);
-        fdi = -1;
-        Rf_error("Header read error on descriptor %d", fdi);
+        close(fd);
+        fd = -1;
+        Rf_error("Header read error on descriptor %d", fd);
     } else {
         out = PROTECT(allocVector(RAWSXP, len));
         payload = RAW(out);
         while (i < len) {
             need = (len - i > MAX_RECV_SIZE) ? MAX_RECV_SIZE : (len - i);
-            n = read(fdi, payload + i, need);
+            n = read(fd, payload + i, need);
             if (n < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     R_CheckUserInterrupt();
                     continue;
                 }
-                close(fdi);
-                fdi = -1;
-                Rf_error("Read error on descriptor %d: %s", fdi, strerror(errno));
+                close(fd);
+                fd = -1;
+                Rf_error("Read error on descriptor %d: %s", fd, strerror(errno));
             } else if (n == 0) {
-                close(fdi);
-                fdi = -1;
-                Rf_error("Connection closed on descriptor %d before all data was received", fdi);
+                close(fd);
+                fd = -1;
+                Rf_error("Connection closed on descriptor %d before all data was received", fd);
             }
             i += n;
 
